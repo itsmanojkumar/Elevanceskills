@@ -105,6 +105,32 @@ def fetch_pdf_url(url: str, timeout_s: int = 30) -> FetchedDoc:
     )
 
 
+def fetch_pdf_file(path: str) -> FetchedDoc:
+    p = BytesIO()
+    with open(path, "rb") as fh:
+        p.write(fh.read())
+    p.seek(0)
+    reader = PdfReader(p)
+    pages_text: list[str] = []
+    for page in reader.pages:
+        try:
+            pages_text.append(page.extract_text() or "")
+        except Exception:
+            continue
+    text = "\n\n".join(pages_text).strip()
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n\s*\n+", "\n\n", text).strip()
+    if not text:
+        text = "No extractable text found in PDF."
+    name = path.replace("\\", "/").split("/")[-1] or "uploaded.pdf"
+    return FetchedDoc(
+        source_id=f"pdf_file:{path}",
+        uri=f"file://{path}",
+        title=name,
+        text=text,
+    )
+
+
 def fetch_sitemap_urls(url: str, timeout_s: int = 30, max_urls: int = 30) -> list[str]:
     resp = requests.get(url, timeout=timeout_s, headers={"User-Agent": "MedquadBot/1.0"})
     resp.raise_for_status()

@@ -8,6 +8,7 @@ from src_platform.common.utils import ensure_dir, read_json, sha256_text, write_
 from src_platform.ingest.chunking import simple_chunk
 from src_platform.ingest.fetchers import (
     FetchedDoc,
+    fetch_pdf_file,
     fetch_pdf_url,
     fetch_rss_feed,
     fetch_sitemap_urls,
@@ -17,7 +18,7 @@ from src_platform.ingest.fetchers import (
 
 @dataclass(frozen=True)
 class SourceSpec:
-    kind: str  # "web" | "rss" | "sitemap" | "pdf"
+    kind: str  # "web" | "rss" | "sitemap" | "pdf" | "pdf_file"
     value: str
 
 
@@ -119,6 +120,8 @@ def update_from_sources(state_file: Path, *, max_chars: int = 900, overlap: int 
                     _ingest_doc(fd)
             elif kind == "pdf":
                 _ingest_doc(fetch_pdf_url(value))
+            elif kind == "pdf_file":
+                _ingest_doc(fetch_pdf_file(value))
             elif kind == "sitemap":
                 for page_url in fetch_sitemap_urls(value):
                     try:

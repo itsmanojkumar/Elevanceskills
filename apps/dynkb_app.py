@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+
 import streamlit as st
 
 from src_platform.config import Settings
@@ -67,6 +69,22 @@ def render_dynkb_app(settings: Settings) -> None:
                 save_state(settings.dynkb_state_file, state)
                 st.success("Source added.")
                 st.rerun()
+
+    st.caption("Or upload a PDF file directly")
+    uploaded_pdf = st.file_uploader("Upload PDF", type=["pdf"], key="dynkb_pdf_upload")
+    if uploaded_pdf is not None:
+        if st.button("Add uploaded PDF", use_container_width=True):
+            uploads_dir = settings.data_platform_dir / "uploads"
+            ensure_dir(uploads_dir)
+            data = uploaded_pdf.getvalue()
+            digest = hashlib.sha256(data).hexdigest()[:12]
+            safe_name = uploaded_pdf.name.replace(" ", "_")
+            out_path = uploads_dir / f"{digest}_{safe_name}"
+            out_path.write_bytes(data)
+            state = add_source(state, SourceSpec(kind="pdf_file", value=str(out_path)))
+            save_state(settings.dynkb_state_file, state)
+            st.success(f"Uploaded PDF added: {out_path.name}")
+            st.rerun()
 
     sources = list(state.get("sources") or [])
     if sources:
