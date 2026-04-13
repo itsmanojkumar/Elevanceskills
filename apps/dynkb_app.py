@@ -50,8 +50,14 @@ def render_dynkb_app(settings: Settings) -> None:
     st.subheader("Sources")
     with st.form("add_source_form", clear_on_submit=True):
         c1, c2 = st.columns([2, 5])
-        kind = c1.selectbox("Type", options=["web"], index=0)
-        value = c2.text_input("URL", placeholder="https://example.com/page")
+        kind = c1.selectbox("Type", options=["web", "rss", "sitemap", "pdf"], index=0)
+        placeholder_map = {
+            "web": "https://example.com/page",
+            "rss": "https://example.com/feed.xml",
+            "sitemap": "https://example.com/sitemap.xml",
+            "pdf": "https://example.com/file.pdf",
+        }
+        value = c2.text_input("Source URL", placeholder=placeholder_map.get(kind, "https://example.com"))
         submitted = st.form_submit_button("Add source")
         if submitted:
             if not value.strip():

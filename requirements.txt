@@ -30,3 +30,7 @@ vaderSentiment
 # Task 6: Language detection + translation (local)
 langdetect
 sentencepiece
+
+# Dynamic KB additional source ingestion
+feedparser
+pypdf
