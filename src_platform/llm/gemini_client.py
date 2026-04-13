@@ -80,12 +80,29 @@ class GeminiClient:
         Generate an image from text prompt using Gemini/Imagen.
         """
         types = self._genai.types
-        resp = self._client.models.generate_images(
-            model=model,
-            prompt=prompt,
-            config=types.GenerateImagesConfig(number_of_images=1),
-        )
+        chosen_model = model
+        try:
+            resp = self._client.models.generate_images(
+                model=chosen_model,
+                prompt=prompt,
+                config=types.GenerateImagesConfig(number_of_images=1),
+            )
+        except Exception:
+            # Fallback: discover an available image model for this API key.
+            discovered = self.list_image_models()
+            if not discovered:
+                raise RuntimeError(
+                    "No image-generation model is available for this API key. "
+                    "Use list models or enable an image model in Google AI Studio."
+                )
+            chosen_model = discovered[0]
+            resp = self._client.models.generate_images(
+                model=chosen_model,
+                prompt=prompt,
+                config=types.GenerateImagesConfig(number_of_images=1),
+            )
         raw = resp.model_dump() if hasattr(resp, "model_dump") else {}
+        raw["resolved_model"] = chosen_model
 
         generated = getattr(resp, "generated_images", None) or []
         if not generated:
@@ -105,4 +122,31 @@ class GeminiClient:
             mime_type="image/png",
             raw=raw,
         )
+
+    def list_image_models(self) -> list[str]:
+        """
+        Return image-generation model names visible to this API key.
+        """
+        names: list[str] = []
+        try:
+            models = self._client.models.list()
+        except Exception:
+            return names
+
+        for m in models:
+            name = getattr(m, "name", "") or ""
+            methods = getattr(m, "supported_actions", None) or getattr(m, "supported_generation_methods", None) or []
+            method_text = " ".join(methods).lower() if methods else ""
+            name_l = name.lower()
+            if "image" in name_l or "imagen" in name_l or "generateimages" in method_text:
+                if name:
+                    names.append(name)
+        # Stable unique order
+        seen = set()
+        out: list[str] = []
+        for n in names:
+            if n not in seen:
+                out.append(n)
+                seen.add(n)
+        return out
 

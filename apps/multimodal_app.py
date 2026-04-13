@@ -1,9 +1,23 @@
 from __future__ import annotations
 
+from urllib.request import Request, urlopen
+
 import streamlit as st
 
 from src_platform.config import Settings
 from src_platform.llm.gemini_client import GeminiClient
+
+
+def _load_image_from_url(url: str) -> tuple[bytes, str]:
+    req = Request(url.strip(), headers={"User-Agent": "Mozilla/5.0"})
+    with urlopen(req, timeout=20) as resp:
+        data = resp.read()
+        mime = resp.headers.get_content_type() or "image/png"
+    if not data:
+        raise RuntimeError("Downloaded image is empty.")
+    if not mime.startswith("image/"):
+        raise RuntimeError(f"URL did not return an image MIME type (got: {mime}).")
+    return data, mime
 
 
 def render_multimodal_app(settings: Settings) -> None:
@@ -41,6 +55,11 @@ def render_multimodal_app(settings: Settings) -> None:
     with tab_understand:
         prompt = st.text_area("Your question", placeholder="Describe what you see and ask a question…", height=120)
         image = st.file_uploader("Upload an image (png/jpg/webp)", type=["png", "jpg", "jpeg", "webp"])
+        image_url = st.text_input(
+            "Or image URL (fallback if upload fails)",
+            placeholder="https://example.com/image.png",
+            help="Use this if browser upload is blocked (e.g., 403).",
+        )
 
         if st.button("Run Gemini", use_container_width=True):
             if not prompt.strip():
@@ -54,6 +73,17 @@ def render_multimodal_app(settings: Settings) -> None:
                         prompt.strip(),
                         image_bytes=image.getvalue(),
                         mime_type=image.type or "image/png",
+                    )
+                elif image_url.strip():
+                    try:
+                        img_bytes, img_mime = _load_image_from_url(image_url)
+                    except Exception as exc:
+                        st.error(f"Image URL load failed: {exc}")
+                        return
+                    resp = client.generate_with_image(
+                        prompt.strip(),
+                        image_bytes=img_bytes,
+                        mime_type=img_mime,
                     )
                 else:
                     resp = client.generate_text(prompt.strip())
@@ -92,7 +122,12 @@ def render_multimodal_app(settings: Settings) -> None:
                     st.json(img_resp.raw)
             except Exception as exc:
                 st.error(
-                    "Image generation failed. Ensure your key has access to the selected image model.\n\n"
+                    "Image generation failed. The selected model may not be enabled for your key.\n\n"
                     f"Details: {exc}"
                 )
+                available = client.list_image_models()
+                if available:
+                    st.info("Available image models for this key:\n- " + "\n- ".join(available))
+                else:
+                    st.info("No image-generation models were discoverable for this key.")
 

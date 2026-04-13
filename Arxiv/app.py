@@ -206,6 +206,19 @@ html[data-theme="dark"] [data-testid="stAppViewContainer"] .stMarkdown div {
     -webkit-text-fill-color: var(--control-text) !important;
     border-radius: 8px !important;
 }
+[data-testid="stChatInput"] textarea,
+[data-testid="stChatInput"] input {
+    background: var(--control-bg) !important;
+    color: var(--control-text) !important;
+    -webkit-text-fill-color: var(--control-text) !important;
+    border: 1px solid var(--control-border) !important;
+}
+[data-testid="stChatInput"] textarea::placeholder,
+[data-testid="stChatInput"] input::placeholder {
+    color: var(--control-placeholder) !important;
+    -webkit-text-fill-color: var(--control-placeholder) !important;
+    opacity: 1 !important;
+}
 [data-testid="stTextInput"] input::placeholder,
 [data-testid="stTextArea"] textarea::placeholder {
     color: var(--control-placeholder) !important;
@@ -452,26 +465,21 @@ def tab_chat(rag: RAGPipeline) -> None:
             task = "explain"
 
         with st.chat_message("assistant", avatar="🤖"):
-            placeholder = st.empty()
             full_response = ""
             retrieved: list[dict] = []
 
             try:
-                gen = rag.stream_answer(prompt, task=task, extra_papers=extra_papers)
-                for chunk in gen:
-                    piece = _safe_text(chunk)
-                    if not piece:
-                        continue
-                    full_response += piece
-                    placeholder.markdown(full_response + "▌")
-                placeholder.markdown(full_response or "I could not generate a response for this query.")
+                # Use non-stream path for stability; avoids frontend websocket delta errors.
+                full_response, retrieved = rag.answer(prompt, task=task, extra_papers=extra_papers)
+                full_response = _safe_text(full_response) or "I could not generate a response for this query."
+                st.markdown(full_response)
                 retrieved = getattr(rag, "_last_papers", [])
             except RuntimeError as exc:
                 full_response = f"⚠️ **LLM Error:** {exc}\n\nCheck your LLM settings in the sidebar."
-                placeholder.error(full_response)
+                st.error(full_response)
             except Exception as exc:
                 full_response = f"⚠️ Error: {exc}"
-                placeholder.error(full_response)
+                st.error(full_response)
 
             if retrieved:
                 with st.expander(f"📎 {len(retrieved)} source papers used"):
