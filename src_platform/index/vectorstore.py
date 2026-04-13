@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,23 +26,90 @@ class DynamicKBIndex:
     def __init__(self, index_dir: Path, model_name: str):
         self.index_dir = index_dir
         self.model_name = model_name
+        self.effective_model_name = model_name
         self.meta_file = self.index_dir / "meta.json"
         self.vectorstore = None
 
     def exists(self) -> bool:
         return self.index_dir.exists() and any(self.index_dir.iterdir())
 
-    def _get_embeddings(self):
-        try:
-            from langchain_huggingface import HuggingFaceEmbeddings
-        except Exception:
-            from langchain_community.embeddings import HuggingFaceEmbeddings
+    def _build_sentence_transformer_embeddings(self, model_name: str):
+        from sentence_transformers import SentenceTransformer
 
-        return HuggingFaceEmbeddings(
-            model_name=self.model_name,
-            model_kwargs={"device": "cpu"},
-            encode_kwargs={"normalize_embeddings": True, "batch_size": 64},
-        )
+        model = SentenceTransformer(model_name, device="cpu")
+
+        class _STEmbeddings:
+            def __call__(self, text: str) -> list[float]:
+                return self.embed_query(text)
+
+            def embed_documents(self, texts: list[str]) -> list[list[float]]:
+                embs = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
+                return [list(map(float, e)) for e in embs]
+
+            def embed_query(self, text: str) -> list[float]:
+                emb = model.encode([text], normalize_embeddings=True, show_progress_bar=False)[0]
+                return list(map(float, emb))
+
+        return _STEmbeddings()
+
+    def _build_hash_embeddings(self, dim: int = 384):
+        """
+        Last-resort deterministic embedding fallback to avoid runtime crashes.
+        This is lower quality but guarantees index build availability.
+        """
+
+        class _HashEmbeddings:
+            def __init__(self, size: int):
+                self.size = size
+
+            def __call__(self, text: str) -> list[float]:
+                return self.embed_query(text)
+
+            def _vec(self, text: str) -> list[float]:
+                v = [0.0] * self.size
+                tokens = (text or "").lower().split()
+                if not tokens:
+                    return v
+                for t in tokens:
+                    h = int(hashlib.sha256(t.encode("utf-8", errors="ignore")).hexdigest(), 16)
+                    idx = h % self.size
+                    sign = -1.0 if ((h >> 1) & 1) else 1.0
+                    v[idx] += sign
+                norm = math.sqrt(sum(x * x for x in v)) or 1.0
+                return [x / norm for x in v]
+
+            def embed_documents(self, texts: list[str]) -> list[list[float]]:
+                return [self._vec(t) for t in texts]
+
+            def embed_query(self, text: str) -> list[float]:
+                return self._vec(text)
+
+        return _HashEmbeddings(dim)
+
+    def _get_embeddings(self):
+        """
+        Build embeddings model with fallback for environments that hit
+        transformers "meta tensor" initialization issues.
+        """
+        primary = self.model_name
+        fallback = "sentence-transformers/all-MiniLM-L6-v2"
+        try:
+            embeddings = self._build_sentence_transformer_embeddings(primary)
+            # Force model readiness early so meta-tensor errors are caught here.
+            _ = embeddings.embed_query("embedding warmup")
+            self.effective_model_name = primary
+            return embeddings
+        except Exception:
+            try:
+                embeddings = self._build_sentence_transformer_embeddings(fallback)
+                _ = embeddings.embed_query("embedding warmup")
+                self.effective_model_name = fallback
+                return embeddings
+            except Exception:
+                embeddings = self._build_hash_embeddings()
+                _ = embeddings.embed_query("embedding warmup")
+                self.effective_model_name = "hash-fallback-384"
+                return embeddings
 
     def load(self) -> bool:
         if not self.exists():
@@ -91,7 +160,7 @@ class DynamicKBIndex:
         self.vectorstore = vs
 
         dim = len(embeddings.embed_query("dimension check"))
-        meta = VectorIndexMeta(model_name=self.model_name, embedding_dim=dim, doc_count=len(lc_docs))
+        meta = VectorIndexMeta(model_name=self.effective_model_name, embedding_dim=dim, doc_count=len(lc_docs))
         write_json(self.meta_file, {"model_name": meta.model_name, "embedding_dim": meta.embedding_dim, "doc_count": meta.doc_count})
         return meta
 
