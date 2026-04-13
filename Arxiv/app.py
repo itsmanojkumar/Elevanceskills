@@ -84,12 +84,16 @@ html[data-theme="dark"] {
 [data-testid="stAppViewContainer"] {
     background: var(--app-bg);
     min-height: 100vh;
+    color: var(--text-primary);
 }
 [data-testid="stSidebar"] {
     background: var(--side-bg);
     border-right: 1px solid var(--card-border);
 }
 [data-testid="stSidebar"] * { color: var(--text-primary) !important; }
+.main, .block-container, .stMarkdown, p, label, small, span, div {
+    color: var(--text-primary);
+}
 .app-header {
     background: linear-gradient(90deg, #1e40af, #7c3aed, #0ea5e9);
     -webkit-background-clip: text;
@@ -120,10 +124,30 @@ html[data-theme="dark"] {
 .metric-value { font-size: 1.8rem; font-weight: 800; color: #6366f1; }
 .metric-label { font-size: 0.8rem; color: var(--text-muted); }
 [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 4px; background: var(--tab-bg); padding: 4px; border-radius: 8px; border: 1px solid var(--card-border); }
-[data-testid="stTabs"] [data-baseweb="tab"] { color: var(--text-muted) !important; border-radius: 6px !important; padding: 6px 16px !important; }
+[data-testid="stTabs"] [data-baseweb="tab"] { color: var(--text-secondary) !important; border-radius: 6px !important; padding: 6px 16px !important; }
 [data-testid="stTabs"] [aria-selected="true"] { background: var(--tab-active) !important; color: #fff !important; }
 .stButton > button { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-weight: 600 !important; }
 [data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea { background: var(--input-bg) !important; border: 1px solid var(--input-border) !important; color: var(--text-primary) !important; border-radius: 8px !important; }
+/* Streamlit/BaseWeb select controls (selectbox/multiselect) */
+div[data-baseweb="select"] > div {
+    background: var(--input-bg) !important;
+    border: 1px solid var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+div[data-baseweb="select"] input {
+    color: var(--text-primary) !important;
+}
+div[data-baseweb="select"] * {
+    color: var(--text-primary) !important;
+}
+/* Checkbox and slider labels */
+[data-testid="stCheckbox"] label,
+[data-testid="stSlider"] label,
+[data-testid="stSelectbox"] label,
+[data-testid="stTextInput"] label {
+    color: var(--text-primary) !important;
+    font-weight: 500;
+}
 hr { border-color: var(--card-border) !important; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0f172a; }
