@@ -1,0 +1,31 @@
+streamlit==1.32.0
+pandas==2.2.1
+numpy==1.26.4
+spacy==3.7.4
+requests==2.31.0
+lxml==5.1.0
+nltk==3.8.1
+tqdm==4.66.2
+Pillow==10.2.0
+
+# Local HuggingFace embeddings (no API cost, model cached to disk)
+sentence-transformers==2.7.0
+torch>=2.6.0
+
+# LangChain + FAISS vector store
+langchain==0.2.6
+langchain-community==0.2.6
+faiss-cpu==1.8.0
+langchain-huggingface==0.0.3
+
+# Task 2: Gemini API (multimodal)
+google-genai
+
+# Env file loading
+python-dotenv
+
+# Task 5: Sentiment analysis (lightweight, local)
+vaderSentiment
+
+# Task 6: Language detection + translation (local)
+langdetect
