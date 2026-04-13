@@ -44,7 +44,8 @@ def render_medical_chatbot_app(settings: Settings) -> None:
         st.error("Medical chatbot app not found at `app.py`.")
         return
 
-    port = 8504
+    # Use a dedicated port to avoid stale/old embedded process conflicts.
+    port = 8514
     target_url = f"http://localhost:{port}"
 
     if not _is_port_open(port):

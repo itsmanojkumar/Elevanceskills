@@ -36,28 +36,63 @@ def render_multimodal_app(settings: Settings) -> None:
         )
     else:
         st.caption(f"Using configured model from backend env: `{configured_model}`")
-    prompt = st.text_area("Your question", placeholder="Describe what you see and ask a question…", height=120)
-    image = st.file_uploader("Upload an image (png/jpg/webp)", type=["png", "jpg", "jpeg", "webp"])
+    tab_understand, tab_generate = st.tabs(["Understand Image + Text", "Generate Image from Text"])
 
-    if st.button("Run Gemini", use_container_width=True):
-        if not prompt.strip():
-            st.warning("Enter a question.")
-            return
+    with tab_understand:
+        prompt = st.text_area("Your question", placeholder="Describe what you see and ask a question…", height=120)
+        image = st.file_uploader("Upload an image (png/jpg/webp)", type=["png", "jpg", "jpeg", "webp"])
 
-        client = GeminiClient(api_key=settings.gemini_api_key, model=model)
-        with st.spinner("Calling Gemini..."):
-            if image is not None:
-                resp = client.generate_with_image(
-                    prompt.strip(),
-                    image_bytes=image.getvalue(),
-                    mime_type=image.type or "image/png",
+        if st.button("Run Gemini", use_container_width=True):
+            if not prompt.strip():
+                st.warning("Enter a question.")
+                return
+
+            client = GeminiClient(api_key=settings.gemini_api_key, model=model)
+            with st.spinner("Calling Gemini..."):
+                if image is not None:
+                    resp = client.generate_with_image(
+                        prompt.strip(),
+                        image_bytes=image.getvalue(),
+                        mime_type=image.type or "image/png",
+                    )
+                else:
+                    resp = client.generate_text(prompt.strip())
+
+            st.markdown("### Response")
+            st.write(resp.text or "(empty)")
+
+            with st.expander("Raw response (debug)", expanded=False):
+                st.json(resp.raw)
+
+    with tab_generate:
+        st.caption("Generate an image from text prompt using Gemini image generation.")
+        img_prompt = st.text_area(
+            "Image generation prompt",
+            placeholder="e.g. A clean medical infographic about asthma triggers, flat design",
+            height=110,
+            key="task2_img_prompt",
+        )
+        image_model = st.text_input(
+            "Image model",
+            value="imagen-3.0-generate-002",
+            help="Use a Gemini/Imagen image model available to your API key.",
+        )
+
+        if st.button("Generate image", use_container_width=True):
+            if not img_prompt.strip():
+                st.warning("Enter an image prompt.")
+                return
+
+            client = GeminiClient(api_key=settings.gemini_api_key, model=model)
+            try:
+                with st.spinner("Generating image..."):
+                    img_resp = client.generate_image(img_prompt.strip(), model=image_model.strip() or "imagen-3.0-generate-002")
+                st.image(img_resp.image_bytes, caption="Generated image", use_container_width=True)
+                with st.expander("Raw image response (debug)", expanded=False):
+                    st.json(img_resp.raw)
+            except Exception as exc:
+                st.error(
+                    "Image generation failed. Ensure your key has access to the selected image model.\n\n"
+                    f"Details: {exc}"
                 )
-            else:
-                resp = client.generate_text(prompt.strip())
-
-        st.markdown("### Response")
-        st.write(resp.text or "(empty)")
-
-        with st.expander("Raw response (debug)", expanded=False):
-            st.json(resp.raw)
 

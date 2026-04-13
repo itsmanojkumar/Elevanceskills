@@ -71,7 +71,7 @@ mark {
     margin: 0 1px;
 }
 .ner-mark {
-    color: var(--text-primary) !important;
+    color: #0f172a !important;
     border: 1px solid var(--surface-border);
 }
 
@@ -125,7 +125,13 @@ mark {
 }
 .answer-text {
     line-height: 1.6;
-    color: var(--text-primary);
+    color: #e2e8f0 !important;
+    opacity: 1 !important;
+    font-weight: 500;
+}
+.answer-text * {
+    color: #e2e8f0 !important;
+    opacity: 1 !important;
 }
 </style>
 """, unsafe_allow_html=True)

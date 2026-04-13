@@ -50,6 +50,14 @@ from src.visualizations import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def _safe_text(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    return str(value)
+
 # ── Custom CSS ────────────────────────────────────────────────────────────
 
 st.markdown(
@@ -67,6 +75,10 @@ st.markdown(
     --input-border: #94a3b8;
     --tab-bg: #e2e8f0;
     --tab-active: #4f46e5;
+    --control-bg: #ffffff;
+    --control-text: #0f172a;
+    --control-border: #94a3b8;
+    --control-placeholder: #64748b;
 }
 html[data-theme="dark"] {
     --app-bg: linear-gradient(135deg, #020817 0%, #0f172a 50%, #0d1f3c 100%);
@@ -80,6 +92,10 @@ html[data-theme="dark"] {
     --input-border: #334155;
     --tab-bg: #0f172a;
     --tab-active: #6366f1;
+    --control-bg: #111827;
+    --control-text: #e5e7eb;
+    --control-border: #334155;
+    --control-placeholder: #94a3b8;
 }
 [data-testid="stAppViewContainer"] {
     background: var(--app-bg);
@@ -93,6 +109,61 @@ html[data-theme="dark"] {
 [data-testid="stSidebar"] * { color: var(--text-primary) !important; }
 .main, .block-container, .stMarkdown, p, label, small, span, div {
     color: var(--text-primary);
+}
+/* Force readable heading/text colors in main area */
+[data-testid="stAppViewContainer"] h1,
+[data-testid="stAppViewContainer"] h2,
+[data-testid="stAppViewContainer"] h3,
+[data-testid="stAppViewContainer"] h4,
+[data-testid="stAppViewContainer"] h5,
+[data-testid="stAppViewContainer"] h6,
+[data-testid="stAppViewContainer"] p,
+[data-testid="stAppViewContainer"] li,
+[data-testid="stAppViewContainer"] strong {
+    color: var(--text-primary) !important;
+}
+[data-testid="stAppViewContainer"] .stCaption,
+[data-testid="stAppViewContainer"] .stMarkdown small {
+    color: var(--text-secondary) !important;
+}
+[data-testid="stChatMessageContent"] *,
+[data-testid="stChatMessage"] * {
+    color: var(--text-primary) !important;
+}
+[data-testid="stHeadingWithActionElements"] h1,
+[data-testid="stHeadingWithActionElements"] h2,
+[data-testid="stHeadingWithActionElements"] h3,
+[data-testid="stHeadingWithActionElements"] h4 {
+    color: var(--text-primary) !important;
+}
+/* Strong fallback overrides for washed-out heading/text blocks */
+[data-testid="stAppViewContainer"] .stMarkdown h1,
+[data-testid="stAppViewContainer"] .stMarkdown h2,
+[data-testid="stAppViewContainer"] .stMarkdown h3,
+[data-testid="stAppViewContainer"] .stMarkdown h4 {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    opacity: 1 !important;
+}
+[data-testid="stAppViewContainer"] .stMarkdown p,
+[data-testid="stAppViewContainer"] .stMarkdown span,
+[data-testid="stAppViewContainer"] .stMarkdown div {
+    color: #334155 !important;
+    -webkit-text-fill-color: #334155 !important;
+    opacity: 1 !important;
+}
+html[data-theme="dark"] [data-testid="stAppViewContainer"] .stMarkdown h1,
+html[data-theme="dark"] [data-testid="stAppViewContainer"] .stMarkdown h2,
+html[data-theme="dark"] [data-testid="stAppViewContainer"] .stMarkdown h3,
+html[data-theme="dark"] [data-testid="stAppViewContainer"] .stMarkdown h4 {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+html[data-theme="dark"] [data-testid="stAppViewContainer"] .stMarkdown p,
+html[data-theme="dark"] [data-testid="stAppViewContainer"] .stMarkdown span,
+html[data-theme="dark"] [data-testid="stAppViewContainer"] .stMarkdown div {
+    color: #cbd5e1 !important;
+    -webkit-text-fill-color: #cbd5e1 !important;
 }
 .app-header {
     background: linear-gradient(90deg, #1e40af, #7c3aed, #0ea5e9);
@@ -124,21 +195,54 @@ html[data-theme="dark"] {
 .metric-value { font-size: 1.8rem; font-weight: 800; color: #6366f1; }
 .metric-label { font-size: 0.8rem; color: var(--text-muted); }
 [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 4px; background: var(--tab-bg); padding: 4px; border-radius: 8px; border: 1px solid var(--card-border); }
-[data-testid="stTabs"] [data-baseweb="tab"] { color: var(--text-secondary) !important; border-radius: 6px !important; padding: 6px 16px !important; }
+[data-testid="stTabs"] [data-baseweb="tab"] { color: var(--text-primary) !important; border-radius: 6px !important; padding: 6px 16px !important; }
 [data-testid="stTabs"] [aria-selected="true"] { background: var(--tab-active) !important; color: #fff !important; }
 .stButton > button { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-weight: 600 !important; }
-[data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea { background: var(--input-bg) !important; border: 1px solid var(--input-border) !important; color: var(--text-primary) !important; border-radius: 8px !important; }
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea {
+    background: var(--control-bg) !important;
+    border: 1px solid var(--control-border) !important;
+    color: var(--control-text) !important;
+    -webkit-text-fill-color: var(--control-text) !important;
+    border-radius: 8px !important;
+}
+[data-testid="stTextInput"] input::placeholder,
+[data-testid="stTextArea"] textarea::placeholder {
+    color: var(--control-placeholder) !important;
+    -webkit-text-fill-color: var(--control-placeholder) !important;
+    opacity: 1 !important;
+}
 /* Streamlit/BaseWeb select controls (selectbox/multiselect) */
 div[data-baseweb="select"] > div {
-    background: var(--input-bg) !important;
-    border: 1px solid var(--input-border) !important;
-    color: var(--text-primary) !important;
+    background: var(--control-bg) !important;
+    border: 1px solid var(--control-border) !important;
+    color: var(--control-text) !important;
 }
 div[data-baseweb="select"] input {
-    color: var(--text-primary) !important;
+    color: var(--control-text) !important;
+    -webkit-text-fill-color: var(--control-text) !important;
+}
+div[data-baseweb="select"] svg {
+    color: var(--control-text) !important;
+    fill: var(--control-text) !important;
 }
 div[data-baseweb="select"] * {
-    color: var(--text-primary) !important;
+    color: var(--control-text) !important;
+}
+/* Dropdown menu items */
+div[role="listbox"],
+ul[role="listbox"] {
+    background: var(--control-bg) !important;
+}
+div[role="option"],
+li[role="option"] {
+    background: var(--control-bg) !important;
+    color: var(--control-text) !important;
+}
+div[role="option"]:hover,
+li[role="option"]:hover {
+    background: #1e293b !important;
+    color: #ffffff !important;
 }
 /* Checkbox and slider labels */
 [data-testid="stCheckbox"] label,
@@ -322,7 +426,7 @@ def tab_chat(rag: RAGPipeline) -> None:
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"], avatar="🧑" if msg["role"] == "user" else "🤖"):
-            st.markdown(msg["content"])
+            st.markdown(_safe_text(msg.get("content", "")))
             if msg["role"] == "assistant" and msg.get("papers"):
                 with st.expander(f"📎 {len(msg['papers'])} source papers"):
                     for p in msg["papers"]:
@@ -355,9 +459,12 @@ def tab_chat(rag: RAGPipeline) -> None:
             try:
                 gen = rag.stream_answer(prompt, task=task, extra_papers=extra_papers)
                 for chunk in gen:
-                    full_response += chunk
+                    piece = _safe_text(chunk)
+                    if not piece:
+                        continue
+                    full_response += piece
                     placeholder.markdown(full_response + "▌")
-                placeholder.markdown(full_response)
+                placeholder.markdown(full_response or "I could not generate a response for this query.")
                 retrieved = getattr(rag, "_last_papers", [])
             except RuntimeError as exc:
                 full_response = f"⚠️ **LLM Error:** {exc}\n\nCheck your LLM settings in the sidebar."

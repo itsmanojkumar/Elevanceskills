@@ -51,7 +51,14 @@ def _get_translator(src: str, tgt: str):
 
     name = _opus_model_name(src, tgt)
     tok = MarianTokenizer.from_pretrained(name)
-    model = MarianMTModel.from_pretrained(name)
+    # Force a plain CPU load path to avoid "meta tensor" states.
+    model = MarianMTModel.from_pretrained(
+        name,
+        low_cpu_mem_usage=False,
+        device_map=None,
+    )
+    model.to("cpu")
+    model.eval()
     return tok, model
 
 
@@ -66,7 +73,16 @@ def translate(text: str, *, src: str, tgt: str) -> str:
 
     tok, model = _get_translator(src, tgt)
     batch = tok([text], return_tensors="pt", padding=True, truncation=True, max_length=512)
-    gen = model.generate(**batch, max_new_tokens=512)
+    try:
+        gen = model.generate(**batch, max_new_tokens=512)
+    except RuntimeError as e:
+        # Some environments can leave weights on "meta" tensors; reload safely once.
+        if "meta tensors" not in str(e):
+            raise
+        _get_translator.cache_clear()
+        tok, model = _get_translator(src, tgt)
+        batch = tok([text], return_tensors="pt", padding=True, truncation=True, max_length=512)
+        gen = model.generate(**batch, max_new_tokens=512)
     out = tok.batch_decode(gen, skip_special_tokens=True)
     return (out[0] if out else "").strip()
 

@@ -260,7 +260,7 @@ def _render_task_debug_panel(page: str, settings: Settings) -> None:
             _status_line("Medical app file", med_app.exists(), str(med_app))
             _status_line("Processed data", data_file.exists(), str(data_file))
             _status_line("FAISS index dir", faiss_dir.exists() and any(faiss_dir.iterdir()), str(faiss_dir))
-            _status_line("Embedded server (8504)", _is_port_open(8504), "http://localhost:8504")
+            _status_line("Embedded server (8514)", _is_port_open(8514), "http://localhost:8514")
             _render_setup_help(
                 task_name="Task 6 — Medical Chatbot",
                 model_info=["Backend: local embeddings + FAISS", "No external LLM/API key required"],
